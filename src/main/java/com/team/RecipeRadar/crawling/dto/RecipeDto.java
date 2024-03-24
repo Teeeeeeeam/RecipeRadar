@@ -15,7 +15,7 @@ import java.util.Map;
 public class RecipeDto {
 
 
-    private Integer postNumber;
+    private String postNumber;
 
     private String imageUrl;
 
@@ -29,12 +29,12 @@ public class RecipeDto {
 
     private String cookingLevel;
 
-    private Map<String,Map<String,String>> ingredient;//["양념재료":["돼지고기":"600g","대파":"1/2대"]]
+    private LinkedHashMap<String,LinkedHashMap<String,String>> ingredient;//["양념재료":["돼지고기":"600g","대파":"1/2대"]]
 
     private LinkedHashMap<String, String> cookingSteps;
 
     @Builder
-    public RecipeDto( Integer postNumber, String imageUrl, String title, String content, String servings, String cookingTime, String cookingLevel, Map<String, Map<String, String>> ingredient, LinkedHashMap<String, String> cookingSteps) {
+    public RecipeDto( String postNumber, String imageUrl, String title, String content, String servings, String cookingTime, String cookingLevel, LinkedHashMap<String, LinkedHashMap<String, String>> ingredient, LinkedHashMap<String, String> cookingSteps) {
         this.postNumber = postNumber;
         this.imageUrl = imageUrl;
         this.title = title;

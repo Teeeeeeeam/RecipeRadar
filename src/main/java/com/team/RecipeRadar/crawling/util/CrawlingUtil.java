@@ -15,9 +15,39 @@ import java.util.List;
 
 
 @Slf4j
-public class UrlBuilder {
+public class CrawlingUtil {
     private static final String BASE_URL = "https://www.10000recipe.com";
     private static final String RANK_LIST_URL = "https://www.10000recipe.com/recipe/list.html";
+    private static final String RECIPE_RANK_LIST_URL = "https://www.10000recipe.com/ranking/home_new.html?rtype=k&dtype=d";
+
+
+    /**
+     * 레시피 검색 순위 100위 100개를 리스트로 반환합니다.
+     * @return  Ex: [오이무침,순두부찌개,콩나물무침,파김치,...]
+     * @throws UrlBuildExceptionHandler
+     */
+    public List<String> getRecipeRankList() throws UrlBuildExceptionHandler {
+
+        try {
+            List<String> recipeRankList = new ArrayList<>();
+
+            Document document = Jsoup.connect(RECIPE_RANK_LIST_URL).get();
+            Elements elements = document.getElementsByClass("best_cont");
+
+
+            elements.forEach(element -> {
+                String p = element.select("a").text();
+                recipeRankList.add(p);
+            });
+
+            return recipeRankList;
+
+        } catch (IOException e) {
+            throw new UrlBuildExceptionHandler("레시피 검색 순위를 스크랩 하다 오류가 발생 하였습니다.", e);
+        }
+
+
+    }
 
     /**
      * 페이징된 레시피 검색 결과의 URL을 추출하여 리스트로 반환합니다.
