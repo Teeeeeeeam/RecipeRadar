@@ -1,6 +1,6 @@
 package com.team.RecipeRadar.crawling.entity;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
