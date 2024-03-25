@@ -29,10 +29,20 @@ public class CrawlingService {
 
     private final EntityMappers entityMapper;
 
-    public void startCrawling() throws UrlBuildExceptionHandler {
+    public void startCrawling(CrawlingOption crawlingOption) throws UrlBuildExceptionHandler {
+        List<RecipeDto> recipeDtoList = new ArrayList<>();
 
+        if(crawlingOption.getRecipe() == null){
+            recipeDtoList = recipePostScraper.repeatedWorkScrap( );
+        }else {
+            List<String> recipes = crawlingOption.getRecipe();
+            Integer maxPage = crawlingOption.getPage();
 
-        List<RecipeDto> recipeDtoList = recipePostScraper.repeatedWorkScrap( );
+            for(String recipe :recipes){
+               recipeDtoList = recipePostScraper.postScrap(recipe,maxPage);
+            }
+        }
+
 
 
         for (RecipeDto recipeDto : recipeDtoList) {
