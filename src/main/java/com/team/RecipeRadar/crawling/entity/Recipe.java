@@ -10,9 +10,9 @@ import java.util.List;
 @Getter
 @Entity
 @NoArgsConstructor
-/*@Table(name="recipe", indexes = {
-        @Index(name = "u_idx_postNumber",columnList = "postNumber",unique = true)
-})*/
+@Table(name="recipe", indexes = {
+        @Index(name = "u_idx_recipe",columnList = "content,cookingLevel,cookingTime,imageUrl,postNumber,servings,title",unique = true)
+})
 public class Recipe {
 
     @Id
