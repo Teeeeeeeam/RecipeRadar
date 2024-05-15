@@ -9,6 +9,7 @@ import com.team.RecipeRadar.domain.recipe.domain.CookingStep;
 import com.team.RecipeRadar.domain.recipe.domain.Recipe;
 import com.team.RecipeRadar.domain.recipe.dto.*;
 import com.team.RecipeRadar.global.Image.application.ImgServiceImpl;
+import com.team.RecipeRadar.global.Image.application.S3UploadService;
 import com.team.RecipeRadar.global.Image.domain.UploadFile;
 import com.team.RecipeRadar.global.Image.utils.FileStore;
 import com.team.RecipeRadar.global.exception.ex.BadRequestException;
@@ -54,7 +55,7 @@ class RecipeControllerTest {
     @MockBean RecipeServiceImpl recipeService;
     @MockBean FileStore fileStore;
     @MockBean ImgServiceImpl imgService;
-
+    @MockBean S3UploadService s3UploadService;
 
     @MockBean
     MemberRepository memberRepository;
