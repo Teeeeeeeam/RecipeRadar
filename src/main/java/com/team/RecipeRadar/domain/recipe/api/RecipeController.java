@@ -5,6 +5,7 @@ import com.team.RecipeRadar.domain.recipe.application.RecipeService;
 import com.team.RecipeRadar.domain.recipe.domain.Recipe;
 import com.team.RecipeRadar.domain.recipe.dto.*;
 import com.team.RecipeRadar.global.Image.application.ImageService;
+import com.team.RecipeRadar.global.Image.application.S3UploadService;
 import com.team.RecipeRadar.global.Image.domain.UploadFile;
 import com.team.RecipeRadar.global.Image.utils.FileStore;
 import com.team.RecipeRadar.global.exception.ErrorResponse;
@@ -43,6 +44,7 @@ public class RecipeController {
     private final ImageService imageService;
     private final RecipeService recipeService;
     private final FileStore fileStore;
+    private final S3UploadService s3UploadService;
 
     @Operation(summary = "레시피 검색 API(무한 스크롤 방식)", description = "조회된 마지막 레시피의 Id값을 통해 다음페이지 여부를 판단 ('lastId'는 조회된 마지막 페이지 작성 값을 넣지않고 보내면 첫번째의 데이터만 출력 , page에 대한 쿼리스트링 작동 x)" )
     @ApiResponses(value = {
@@ -157,7 +159,6 @@ public class RecipeController {
                 }
                 return ResponseEntity.badRequest().body(new ErrorResponse<>(false,"실패",errors));
             }
-
             Recipe recipe = recipeService.saveRecipe(recipeSaveRequest);
             UploadFile uploadFile = fileStore.storeFile(file);
             imageService.saveRecipeImg(recipe,uploadFile);
@@ -207,4 +208,50 @@ public class RecipeController {
         }
     }
 
+    @PostMapping(value = "/admin/save/s3/recipe", consumes= MediaType.MULTIPART_FORM_DATA_VALUE ,produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> s3_recipe_image(@Valid @RequestPart RecipeSaveRequest recipeSaveRequest, BindingResult bindingResult, @RequestPart(required = false) MultipartFile file){
+        try {
+            if (bindingResult.hasErrors()){
+                List<FieldError> fieldErrors = bindingResult.getFieldErrors();
+                Map<String,String> errors = new LinkedHashMap<>();
+                for (FieldError error : fieldErrors){
+                    errors.put(error.getField(),error.getDefaultMessage());
+                }
+                return ResponseEntity.badRequest().body(new ErrorResponse<>(false,"실패",errors));
+            }
+
+            String uploadFile = s3UploadService.uploadFile(file);
+             recipeService.s3_saveRecipe(recipeSaveRequest,uploadFile);
+            return ResponseEntity.ok(new ControllerApiResponse<>(true,"레시피 등록 성공"));
+        }catch (BadRequestException e){
+            throw new BadRequestException(e.getMessage());          //{"이미지 파일이 아닐시", "대표 이미지 사진이 등록 안될시","70MB 초과시"}
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new ServerErrorException("서버 오류 발생");
+        }
+    }
+
+    @PostMapping(value = "/admin/update/s3/{recipe-id}",consumes= MediaType.MULTIPART_FORM_DATA_VALUE ,produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> s3_updateRecipe(@PathVariable(name = "recipe-id")Long recipeId ,
+                                          @Valid @RequestPart RecipeUpdateRequest recipeUpdateRequest, BindingResult bindingResult,
+                                          @RequestPart MultipartFile file){
+        try {
+            if (bindingResult.hasErrors()){
+                List<String> errors = new ArrayList<>();
+                for (FieldError error : bindingResult.getFieldErrors()){
+                    errors.add(error.getDefaultMessage());
+                }
+                return ResponseEntity.badRequest().body(new ErrorResponse<>(false,"모든 값을 입력해주세요",errors));
+            }
+            recipeService.s3_updateRecipe(recipeId,recipeUpdateRequest,file);
+            return ResponseEntity.ok(new ControllerApiResponse<>(true,"레시피 수정 성공"));
+        }catch (NoSuchElementException e){
+            throw new BadRequestException(e.getMessage());
+        } catch (BadRequestException e){
+            throw new BadRequestException(e.getMessage());
+        } catch (Exception e){
+            e.printStackTrace();
+            throw new ServerErrorException("서버오류");
+        }
+    }
 }

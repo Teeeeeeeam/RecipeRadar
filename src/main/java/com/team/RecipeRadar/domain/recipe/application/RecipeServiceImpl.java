@@ -7,10 +7,10 @@ import com.team.RecipeRadar.domain.recipe.domain.CookingStep;
 import com.team.RecipeRadar.domain.recipe.domain.Ingredient;
 import com.team.RecipeRadar.domain.recipe.domain.Recipe;
 import com.team.RecipeRadar.domain.recipe.dto.*;
+import com.team.RecipeRadar.global.Image.application.S3UploadService;
 import com.team.RecipeRadar.global.Image.dao.ImgRepository;
 import com.team.RecipeRadar.global.Image.domain.UploadFile;
 import com.team.RecipeRadar.global.Image.utils.FileStore;
-import com.team.RecipeRadar.global.exception.ex.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,6 +34,7 @@ public class RecipeServiceImpl implements RecipeService{
     private final CookStepRepository cookStepRepository;
     private final ImgRepository imgRepository;
     private final FileStore fileStore;
+    private final S3UploadService s3UploadService;
 
     /**
      * recipeRepository에서 페이징쿼리를 담아 반환된 데이터를 Response로 옮겨담아 전송, 조회 전용 메소드
@@ -170,6 +170,53 @@ public class RecipeServiceImpl implements RecipeService{
         uploadFile.setOriginFileName(file.getOriginalFilename());
 
         imgRepository.save(uploadFile);
+    }
+
+    @Override
+    public void s3_saveRecipe(RecipeSaveRequest recipeSaveRequest, String fileUrl) {
+        Recipe save_Recipe= recipeRepository.save(Recipe.toEntity_s3(recipeSaveRequest,fileUrl));
+
+        String ingredient_stream = recipeSaveRequest.getIngredients().stream().collect(Collectors.joining("|"));
+
+        Ingredient ingredient = Ingredient.builder()
+                .ingredients(ingredient_stream)
+                .recipe(save_Recipe).build();
+
+        ingredientRepository.save(ingredient);
+
+        List<String> cookSteps = recipeSaveRequest.getCookSteps();
+        List<CookingStep> cookingSteps = new ArrayList<>();
+        for (String steps : cookSteps){
+            cookingSteps.add(CookingStep.builder().steps(steps).recipe(save_Recipe).build());
+        }
+        cookStepRepository.saveAll(cookingSteps);
+    }
+
+    @Override
+    public void s3_updateRecipe(Long recipeId, RecipeUpdateRequest recipeUpdateRequest, MultipartFile file) {
+        Recipe recipe = recipeRepository.findById(recipeId).orElseThrow(() -> new NoSuchElementException("해당 레시피를 찾을수 없습니다."));
+
+        s3UploadService.deleteFile(recipe.getImageUrl());
+        String uploadFile = s3UploadService.uploadFile(file);
+
+        List<Map<String, String>> cookeSteps = recipeUpdateRequest.getCookeSteps();
+
+        for (Map<String,String> cookeStep : cookeSteps) {
+            long cookStepId = Long.parseLong(cookeStep.get("cook_step_id"));
+            Optional<CookingStep> byId = cookStepRepository.findById(cookStepId);
+            if (byId.isPresent()){
+                String cookSteps_Value = cookeStep.get("cook_steps");
+                CookingStep cookingStep = byId.get();
+                cookingStep.update(cookSteps_Value);
+                cookStepRepository.save(cookingStep);
+            }
+        }
+
+        String ing = recipeUpdateRequest.getIngredients().stream().collect(Collectors.joining("|"));
+        ingredientRepository.updateRecipe_ing(recipe.getId(),ing);
+
+        recipe.s3_update_recipe(recipeUpdateRequest.getTitle(),recipeUpdateRequest.getCookLevel(),recipeUpdateRequest.getPeople(),recipeUpdateRequest.getCookTime(),uploadFile);
+        recipeRepository.save(recipe);
     }
 
 

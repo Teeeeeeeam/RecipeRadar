@@ -23,4 +23,7 @@ public interface RecipeService {
     Recipe saveRecipe(RecipeSaveRequest recipeSaveRequest);
     void updateRecipe(Long recipeId,  RecipeUpdateRequest recipeUpdateRequest, MultipartFile file) throws Exception;
 
+    void s3_saveRecipe(RecipeSaveRequest recipeSaveRequest,String fileUrl);
+    void s3_updateRecipe(Long recipeId, RecipeUpdateRequest recipeUpdateRequest, MultipartFile file);
+
 }
