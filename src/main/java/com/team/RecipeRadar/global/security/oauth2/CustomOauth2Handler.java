@@ -7,7 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URI;
 
 
 @Service
@@ -31,6 +34,7 @@ public class CustomOauth2Handler extends SimpleUrlAuthenticationSuccessHandler {
     private String successUrl;
 
     //소셜 로그인 성공시 해당로직을 타게되며 accessToken 과 RefreshToken을 발급해준다.
+    // 소셜 로그인 성공 시 해당 로직을 타게 되며 accessToken과 RefreshToken을 발급해준다.
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         log.info("onAuthenticationSuccess실행");
@@ -42,9 +46,9 @@ public class CustomOauth2Handler extends SimpleUrlAuthenticationSuccessHandler {
 
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(successUrl);
 
-        String redirectURI = builder
-                .queryParam("access-token", jwtToken)
-                .build().toString();
+//        String redirectURI = builder
+//                .queryParam("access-token", jwtToken)
+//                .build().toString();
 
         ResponseCookie responseCookie = ResponseCookie.from("RefreshToken", refreshToken)
                 .httpOnly(true)
@@ -54,14 +58,18 @@ public class CustomOauth2Handler extends SimpleUrlAuthenticationSuccessHandler {
                 .maxAge(30 * 24 * 60 * 60)
                 .build();
 
+//        response.setHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
+//        response.sendRedirect(redirectURI);
 
-        if (jwtToken != null) {
-            HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.SET_COOKIE, responseCookie.toString());
-            response.setHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
-            response.sendRedirect(redirectURI);
-        } else {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND, "페이지를 찾을 수 없습니다.");
-        }
+        handleRedirect(successUrl,responseCookie,jwtToken);
+
     }
+
+    public ResponseEntity<Void> handleRedirect(String redirectUrl,ResponseCookie responseCookie,String jwtToken) {
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.SET_COOKIE,responseCookie.toString())
+                .location(URI.create(redirectUrl+jwtToken))
+                .build();
+    }
+
 }
